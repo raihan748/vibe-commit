@@ -344,6 +344,20 @@ fn should_split_hunks(patch: &FilePatch) -> bool {
     has_test && has_logic
 }
 
+fn is_fix_indicator(content: &str) -> bool {
+    let lower = content.to_lowercase();
+    if lower.contains("unwrap_or") || lower.contains("handle_err") || lower.contains("if err != nil") {
+        return true;
+    }
+    // Check whole word tokens so 'debug' does not match 'bug', and 'prefix' does not match 'fix'
+    for token in lower.split(|c: char| !c.is_alphanumeric() && c != '_') {
+        if token == "fix" || token == "fixes" || token == "fixed" || token == "bug" || token == "bugfix" || token == "hotfix" {
+            return true;
+        }
+    }
+    false
+}
+
 fn classify_single_hunk(hunk: &Hunk, _file_path: &str) -> (CommitType, usize, String) {
     let symbols = hunk.extracted_symbols();
 
@@ -358,13 +372,7 @@ fn classify_single_hunk(hunk: &Hunk, _file_path: &str) -> (CommitType, usize, St
 
     // Check if fix
     let is_fix = hunk.lines.iter().any(|l| {
-        let c = l.content.to_lowercase();
-        c.contains("fix")
-            || c.contains("bug")
-            || c.contains("unwrap_or")
-            || c.contains("catch")
-            || c.contains("if err != nil")
-            || c.contains("error::")
+        l.line_type == DiffLineType::Addition && is_fix_indicator(&l.content)
     });
     if is_fix && hunk.additions <= 10 {
         return (CommitType::Fix, 40, "fix edge cases and error handling".to_string());
@@ -423,11 +431,7 @@ fn classify_hunks_aggregate(hunks: &[Hunk], file_path: &str) -> (CommitType, usi
                 if lower.contains("#[test]") || lower.contains("test_") || lower.contains("assert!") {
                     contains_test = true;
                 }
-                if lower.contains("fix")
-                    || lower.contains("bug")
-                    || lower.contains("unwrap_or")
-                    || lower.contains("handle_err")
-                {
+                if is_fix_indicator(&l.content) {
                     contains_fix = true;
                 }
             }

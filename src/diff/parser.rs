@@ -94,8 +94,10 @@ impl DiffParser {
 
             if line.starts_with("new file mode") {
                 is_new = true;
+                old_path = None;
             } else if line.starts_with("deleted file mode") {
                 is_deleted = true;
+                new_path = None;
             } else if line.starts_with("rename from ") {
                 is_renamed = true;
                 old_path = Some(line.trim_start_matches("rename from ").trim().to_string());
@@ -108,6 +110,7 @@ impl DiffParser {
                     old_path = Some(p);
                 } else {
                     is_new = true;
+                    old_path = None;
                 }
             } else if line.starts_with("+++ ") {
                 let p = parse_file_marker(line, "+++ ");
@@ -115,6 +118,7 @@ impl DiffParser {
                     new_path = Some(p);
                 } else {
                     is_deleted = true;
+                    new_path = None;
                 }
             } else if line.starts_with("@@ ") {
                 // Start of hunks
@@ -365,3 +369,23 @@ fn parse_range(s: &str, expected_prefix: char) -> Result<(usize, usize), DiffPar
         Ok((start, 1))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_range_single_and_multiple() {
+        assert_eq!(parse_range("-42,10", '-').unwrap(), (42, 10));
+        assert_eq!(parse_range("+1", '+').unwrap(), (1, 1));
+        assert!(parse_range("invalid", '+').is_err());
+    }
+
+    #[test]
+    fn test_strip_git_prefix() {
+        assert_eq!(strip_git_prefix("a/src/main.rs").as_deref(), Some("src/main.rs"));
+        assert_eq!(strip_git_prefix("b/lib/core.go").as_deref(), Some("lib/core.go"));
+        assert_eq!(strip_git_prefix("/dev/null"), None);
+    }
+}
+
