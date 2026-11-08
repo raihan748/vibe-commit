@@ -1,0 +1,15 @@
+[package]
+name = "vibe-commit"
+version = "0.1.0"
+edition = "2021"
+authors = ["Raihan <developer@telkom.sch.id>"]
+description = "Monolithic AI diff chunker & atomic conventional commit planner"
+license = "MIT"
+
+[dependencies]
+clap = { version = "4.5", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[dev-dependencies]
+tempfile = "3.10"
